@@ -1,6 +1,8 @@
 -module(gcm).
 -behaviour(gen_server).
 
+-include("logger.hrl").
+
 -export([start/2, stop/1, start_link/2]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -69,7 +71,7 @@ do_push(_, _, _, 0) ->
     ok;
 
 do_push(RegIds, Message, Key, Retry) ->
-    error_logger:info_msg("Sending message: ~p to reg ids: ~p retries: ~p.~n", [Message, RegIds, Retry]),
+    ?INFO_MSG("Sending message: ~p to reg ids: ~p retries: ~p.~n", [Message, RegIds, Retry]),
     case gcm_api:push(RegIds, Message, Key) of
         {ok, GCMResult} ->
             handle_result(GCMResult, RegIds);
@@ -82,14 +84,29 @@ do_push(RegIds, Message, Key, Retry) ->
 
 handle_result(GCMResult, RegIds) ->
     {_MulticastId, _SuccessesNumber, _FailuresNumber, _CanonicalIdsNumber, Results} = GCMResult,
-    lists:map(fun({Result, RegId}) -> {RegId, parse(Result)} end, lists:zip(Results, RegIds)).
+    lists:map(fun({Result, RegId}) ->
+      Res = parse(Result),
+      case Res of
+        ok -> ok;
+        {<<"NewRegistrationId">>, NewRegId} ->
+          mod_push:deregister_device(google, RegId, NewRegId);
+        <<"NotRegistered">> ->
+          mod_push:deregister_device(google, RegId, undefined);
+        <<"MissingRegistration">> ->
+          mod_push:deregister_device(google, RegId, undefined);
+        <<"InvalidRegistration">> ->
+          mod_push:deregister_device(google, RegId, undefined);
+        _ -> ok
+      end,
+      {RegId, Res}
+    end, lists:zip(Results, RegIds)).
 
 do_backoff(RetryAfter, RegIds, Message, Key, Retry) ->
     case RetryAfter of
         no_retry ->
             ok;
         _ ->
-            error_logger:info_msg("Received retry-after. Will retry: ~p times~n", [Retry-1]),
+            ?INFO_MSG("Received retry-after. Will retry: ~p times~n", [Retry-1]),
             timer:apply_after(RetryAfter * 1000, ?MODULE, do_push, [RegIds, Message, Key, Retry - 1])
     end.
 

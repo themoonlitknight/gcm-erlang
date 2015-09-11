@@ -7,8 +7,10 @@
         stdlib,
         inets,
         ssl,
+        lager,
         jsx
     ]},
     {mod, {gcm_app, []}},
+    {modules, []},
     {env, []}
 ]}.
