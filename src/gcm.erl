@@ -80,22 +80,7 @@ do_push(RegIds, Message, Key, Retry) ->
 
 handle_result(GCMResult, RegIds) ->
     {_MulticastId, _SuccessesNumber, _FailuresNumber, _CanonicalIdsNumber, Results} = GCMResult,
-    lists:map(fun({Result, RegId}) ->
-      Res = parse(Result),
-      case Res of
-        ok -> ok;
-        {<<"NewRegistrationId">>, NewRegId} ->
-          mod_push:deregister_device(google, RegId, NewRegId);
-        <<"NotRegistered">> ->
-          mod_push:deregister_device(google, RegId, undefined);
-        <<"MissingRegistration">> ->
-          mod_push:deregister_device(google, RegId, undefined);
-        <<"InvalidRegistration">> ->
-          mod_push:deregister_device(google, RegId, undefined);
-        _ -> ok
-      end,
-      {RegId, Res}
-    end, lists:zip(Results, RegIds)).
+    lists:map(fun({Result, RegId}) -> {RegId, parse(Result)} end, lists:zip(Results, RegIds)).
 
 do_backoff(_, _, _, _, 0) -> ok;
 
@@ -104,7 +89,7 @@ do_backoff(RetryAfter, RegIds, Message, Key, Retry) ->
         no_retry ->
             ok;
         _ ->
-            ?INFO_MSG("Received retry-after. Will retry: ~p times~n", [Retry-1]),
+            ?INFO_MSG("Received retry-after. Will retry: ~p times~n", [Retry]),
             timer:apply_after(RetryAfter * 1000, ?MODULE, do_push, [RegIds, Message, Key, Retry])
     end.
 
