@@ -13,9 +13,8 @@
 -type result()  :: {number(), non_neg_integer(), non_neg_integer(), non_neg_integer(), [any()]}.
 
 -spec push(regids(),message(),string()) -> {'error',any()} | {'noreply','unknown'} | {'ok',result()}.
-push(RegIds, Message, Key) ->
+push(RegIds, Message, ApiKey) ->
     Request = jsx:encode([{<<"registration_ids">>, RegIds}|Message]),
-    ApiKey = string:concat("key=", Key),
 
     try httpc:request(post, {?BASEURL, [{"Authorization", ApiKey}], "application/json", Request}, [], []) of
         {ok, {{_, 200, _}, _Headers, Body}} ->
