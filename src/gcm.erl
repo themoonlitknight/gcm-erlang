@@ -66,17 +66,13 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-%% Internal
-do_push(_, _, _, 0) ->
-    ok;
-
 do_push(RegIds, Message, Key, Retry) ->
     ?INFO_MSG("Sending message: ~p to reg ids: ~p retries: ~p.~n", [Message, RegIds, Retry]),
     case gcm_api:push(RegIds, Message, Key) of
         {ok, GCMResult} ->
             handle_result(GCMResult, RegIds);
         {error, {retry, RetryAfter}} ->
-            do_backoff(RetryAfter, RegIds, Message, Key, Retry),
+            do_backoff(RetryAfter, RegIds, Message, Key, Retry - 1),
             {error, retry};
         {error, Reason} ->
             {error, Reason}
@@ -101,13 +97,15 @@ handle_result(GCMResult, RegIds) ->
       {RegId, Res}
     end, lists:zip(Results, RegIds)).
 
+do_backoff(_, _, _, _, 0) -> ok;
+
 do_backoff(RetryAfter, RegIds, Message, Key, Retry) ->
     case RetryAfter of
         no_retry ->
             ok;
         _ ->
             ?INFO_MSG("Received retry-after. Will retry: ~p times~n", [Retry-1]),
-            timer:apply_after(RetryAfter * 1000, ?MODULE, do_push, [RegIds, Message, Key, Retry - 1])
+            timer:apply_after(RetryAfter * 1000, ?MODULE, do_push, [RegIds, Message, Key, Retry])
     end.
 
 parse(Result) ->
