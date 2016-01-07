@@ -38,7 +38,8 @@ start_link(Name, Key) ->
     gen_server:start_link({local, Name}, ?MODULE, [Key], []).
 
 init([Key]) ->
-    {ok, #state{key=Key}}.
+    GoogleKey = string:concat("key=", Key),
+    {ok, #state{key = GoogleKey}}.
 
 handle_call(stop, _From, State) ->
     {stop, normal, stopped, State};
