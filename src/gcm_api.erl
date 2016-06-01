@@ -13,14 +13,17 @@
 -type result()  :: {number(), non_neg_integer(), non_neg_integer(), non_neg_integer(), [any()]}.
 
 -spec push(regids(),message(),string()) -> {'error',any()} | {'noreply','unknown'} | {'ok',result()}.
- 
-push(RegIds, Message, ApiKey) ->
-    Request =
-        if is_map(Message) -> maps:put(<<"registration_ids">>, RegIds, Message);
-           true -> [{<<"registration_ids">>, RegIds}|Message]
-        end,
-    Payload = jsx:encode(Request),
-    try httpc:request(post, {?BASEURL, [{"Authorization", ApiKey}], "application/json", Payload}, [], []) of
+
+push(RegIds, Message, ApiKey) when is_map(Message) ->
+    Request = maps:put(<<"registration_ids">>, RegIds, Message),
+    push(jsx:encode(Request), ApiKey);
+
+push(RegIds, Message, ApiKey) when is_list(Message) ->
+    Request = [{<<"registration_ids">>, RegIds} | Message],
+    push(jsx:encode(Request), ApiKey).
+
+push(Message, ApiKey) ->
+    try httpc:request(post, {?BASEURL, [{"Authorization", ApiKey}], "application/json", Message}, [], []) of
         {ok, {{_, 200, _}, _Headers, Body}} ->
             Json = jsx:decode(response_to_binary(Body)),
             ?INFO_MSG("Result was: ~p~n", [Json]),
