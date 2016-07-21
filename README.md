@@ -1,8 +1,6 @@
 gcm-erlang
 =======
 
-[![Build Status](https://api.travis-ci.org/pdincau/gcm-erlang.png)](https://travis-ci.org/pdincau/gcm-erlang)
-
 This software provides an Erlang client for [`Google Cloud Messaging`](http://developer.android.com/google/gcm/index.html "Google Cloud Messaging for Android").
 
 
@@ -26,7 +24,7 @@ The first thing you have to do is to compile all the Erlang files using `rebar`.
 You can use gcm_app as a dependency in your rebar.config:
 
     {deps , [
-        {gcm, ".*", {git, "https://github.com/pdincau/gcm-erlang.git", {tag, "1.0.1"}}}
+        {gcm, ".*", {git, "https://github.com/softwarejoint/gcm-erlang.git", {tag, "1.0.2"}}}
     ]}.
 
 ###How to run tests:
